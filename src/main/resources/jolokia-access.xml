@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<restrict>
+    <remote>
+        <host>127.0.0.1</host>
+        <host>localhost</host>
+    </remote>
+
+    <http>
+        <method>post</method>
+        <method>get</method>
+    </http>
+
+    <commands>
+        <command>read</command>
+        <command>list</command>
+        <command>version</command>
+    </commands>
+
+    <cors>
+        <allow-origin>http://localhost:*</allow-origin>
+        <allow-origin>http://127.0.0.1:*</allow-origin>
+    </cors>
+</restrict>

@@ -1,7 +1,7 @@
 package com.spring.validator.constraints.annotation;
 
 
-import com.spring.validator.constraints.DateFldFormatValidator;
+import com.spring.validator.constraints.NotNullStringValidator;
 
 import javax.validation.Constraint;
 import javax.validation.Payload;
@@ -10,24 +10,25 @@ import java.lang.annotation.*;
 
 @Documented
 @Constraint(
-        validatedBy = DateFldFormatValidator.class
+        validatedBy = {NotNullStringValidator.class}
 )
 @Target({ElementType.METHOD, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.CONSTRUCTOR, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @ReportAsSingleViolation
-public @interface DateFldFormat {
-    String message() default "时间格式无效";
+//@NotNull
+public @interface NotNullString {
+    String message() default "不能为空";
 
     Class<?>[] groups() default {};
 
     Class<? extends Payload>[] payload() default {};
 
-    String datePattern() default "yyyy-MM-dd HH:mm:ss";
+    boolean allowEmpty() default false;
 
     @Target({ElementType.METHOD, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.CONSTRUCTOR, ElementType.PARAMETER})
     @Retention(RetentionPolicy.RUNTIME)
     @Documented
-    @interface List {
-        DateFldFormat[] value();
+    public @interface List {
+        NotNullString[] value();
     }
 }

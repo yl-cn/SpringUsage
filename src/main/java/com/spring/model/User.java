@@ -9,6 +9,7 @@ public class User {
     public interface WithPasswordView extends WithoutPasswordView {};
 
     private String username;
+
     private String password;
 
     public User() {

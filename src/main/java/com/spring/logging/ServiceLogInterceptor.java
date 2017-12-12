@@ -1,23 +1,25 @@
 package com.spring.logging;
 
-import com.google.gson.Gson;
 import com.spring.logging.annotation.ServiceLogging;
+import com.spring.util.GsonUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ArrayUtils;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Method;
+import java.lang.annotation.Annotation;
+import java.util.Arrays;
 
 @Aspect
 @Component
 @Slf4j
-public class ServiceLogInterceptor {
+public class ServiceLogInterceptor extends BaseInterceptor{
 
     ThreadLocal<Long> startTime =  new ThreadLocal<>();
 
-    //@Pointcut("@annotation(com.spring.logging.annotation.ServiceLogging)")
+    //@Pointcut("@annotation(com.gznb.member.logging.annotation.ServiceLogging)")
     @Pointcut("execution(public * com.spring.service.*.*.*(..)) ")
     public void serviceAspectPointcut() {
         // Do nothing
@@ -30,9 +32,8 @@ public class ServiceLogInterceptor {
 
     @AfterReturning("serviceAspectPointcut()")
     public void doAfterReturning(JoinPoint joinPoint){
-        log.info("ServiceLogInterceptor.doAfterReturning()");
-
-        log.info("耗时（毫秒） : {}", (System.currentTimeMillis()- startTime.get()));
+        log.info("{} 耗时（毫秒） : {}", getFullMethodDescription(joinPoint, ServiceLogging.class),
+                (System.currentTimeMillis()- startTime.get()));
     }
 
 
@@ -45,8 +46,8 @@ public class ServiceLogInterceptor {
             result = joinPoint.proceed();
 
         } catch (Exception e) {
-            log.error("\n异常方法: {} \n 异常代码:{} \n 异常信息:{} \n 参数:{}",
-                    getMthodDescription(joinPoint),
+            log.error("\n异常方法: {} \n异常代码:{} \n异常信息:{} \n参数:{}",
+                    getFullMethodDescription(joinPoint, ServiceLogging.class),
                     e.getClass().getName(),
                     e.getMessage(),
                     paramsToStr(joinPoint.getArgs()));
@@ -65,65 +66,22 @@ public class ServiceLogInterceptor {
      */
     public String paramsToStr(Object[] params) {
         StringBuilder result = new StringBuilder();
-        Gson gson = new Gson();
-        if (params !=  null && params.length > 0) {
-            for ( int i = 0; i < params.length; i++) {
-                result.append(gson.toJson(params[i]) + ";");
-            }
+
+        if (!ArrayUtils.isEmpty(params)) {
+            Arrays.stream(params).forEach(p -> result.append("\n" + GsonUtil.toJson(p,true)));
         }
 
         return result.toString();
     }
 
-    /**
-     * 获取注解中对方法的描述信息
-     *
-     * @param joinPoint 切点
-     * @return 方法描述
-     * @throws Exception
-     */
-    public static String getMthodDescription(ProceedingJoinPoint joinPoint)
-            throws Exception {
-        String targetName = joinPoint.getTarget().getClass().getName();
-        String methodName = joinPoint.getSignature().getName();
+    @Override
+    public <T extends Annotation> String getAnnotationValue(T annotation) {
 
-        String packages = joinPoint.getThis().getClass().getName();
-
-        // 如果是CGLIB动态生成的类
-        if (packages.indexOf("$$EnhancerByCGLIB$$") > -1
-                || packages.indexOf("EnhancerBySpringCGLIB") > -1) {
-            packages = packages.substring(0, packages.indexOf("$$"));
+        if(null != annotation && annotation instanceof ServiceLogging) {
+            ServiceLogging serviceLogging = (ServiceLogging)annotation;
+            return serviceLogging.moduleName();
         }
-
-        //获得参数列表
-        Object[] arguments = joinPoint.getArgs();
-
-        if(arguments.length<=0){
-            log.info("=== {} 方法没有参数", methodName);
-        }else{
-            for(int i=0;i<arguments.length;i++){
-                log.info("==== 参数   {}  : {}", (i+1), arguments[i]);
-            }
-        }
-
-        Class targetClass = Class.forName(targetName);
-        Method[] method = targetClass.getMethods();
-        String methodDesc = "";
-        for (Method m : method) {
-            if (m.getName().equals(methodName)) {
-                Class[] tmpCs = m.getParameterTypes();
-                if (tmpCs.length == arguments.length) {
-                    ServiceLogging methodCache = m.getAnnotation(ServiceLogging.class);
-                    if(null == methodCache) {
-                        methodDesc = methodName;
-                    }
-                    else {
-                        methodDesc = methodCache.moduleName();
-                    }
-                    break;
-                }
-            }
-        }
-        return packages + ":" + methodDesc;
+        return null;
     }
+
 }
