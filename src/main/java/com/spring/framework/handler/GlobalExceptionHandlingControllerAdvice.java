@@ -22,8 +22,6 @@ import org.springframework.web.servlet.ModelAndView;
  * but offers them globally. The exceptions below could be raised by any
  * controller and they would be handled here, if not handled in the controller
  * already.
- *
- * @author Paul Chapman
  */
 @Slf4j
 @ControllerAdvice

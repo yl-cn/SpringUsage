@@ -1,6 +1,6 @@
 package com.spring.util;
 
-import com.spring.exception.InvalidIdCardException;
+import com.spring.exception.ServiceException;
 import lombok.Data;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -55,22 +55,21 @@ public class IdCardValidator {
      * 51:"四川",52:"贵州",53:"云南",54:"西藏",61:"陕西",62:"甘肃",
      * 63:"青海",64:"宁夏",65:"新疆",71:"台湾",81:"香港",82:"澳门",91:"国外"}
      */
-    private static final Map<String, String> cityCodeMap = new HashMap<String, String>() {
-        {
-            this.put("11", "北京");this.put("12", "天津");this.put("13", "河北");
-            this.put("14", "山西");this.put("15", "内蒙古");this.put("21", "辽宁");
-            this.put("22", "吉林");this.put("23", "黑龙江");this.put("31", "上海");
-            this.put("32", "江苏");this.put("33", "浙江");this.put("34", "安徽");
-            this.put("35", "福建");this.put("36", "江西");this.put("37", "山东");
-            this.put("41", "河南");this.put("42", "湖北");this.put("43", "湖南");
-            this.put("44", "广东");this.put("45", "广西");this.put("46", "海南");
-            this.put("50", "重庆");this.put("51", "四川");this.put("52", "贵州");
-            this.put("53", "云南");this.put("54", "西藏");this.put("61", "陕西");
-            this.put("62", "甘肃");this.put("63", "青海");this.put("64", "宁夏");
-            this.put("65", "新疆");this.put("71", "台湾");this.put("81", "香港");
-            this.put("82", "澳门");this.put("91", "国外");
-        }
-    };
+    private static final Map<String, String> cityCodeMap = new HashMap<>();
+    static {
+            cityCodeMap.put("11", "北京");cityCodeMap.put("12", "天津");cityCodeMap.put("13", "河北");
+            cityCodeMap.put("14", "山西");cityCodeMap.put("15", "内蒙古");cityCodeMap.put("21", "辽宁");
+            cityCodeMap.put("22", "吉林");cityCodeMap.put("23", "黑龙江");cityCodeMap.put("31", "上海");
+            cityCodeMap.put("32", "江苏");cityCodeMap.put("33", "浙江");cityCodeMap.put("34", "安徽");
+            cityCodeMap.put("35", "福建");cityCodeMap.put("36", "江西");cityCodeMap.put("37", "山东");
+            cityCodeMap.put("41", "河南");cityCodeMap.put("42", "湖北");cityCodeMap.put("43", "湖南");
+            cityCodeMap.put("44", "广东");cityCodeMap.put("45", "广西");cityCodeMap.put("46", "海南");
+            cityCodeMap.put("50", "重庆");cityCodeMap.put("51", "四川");cityCodeMap.put("52", "贵州");
+            cityCodeMap.put("53", "云南");cityCodeMap.put("54", "西藏");cityCodeMap.put("61", "陕西");
+            cityCodeMap.put("62", "甘肃");cityCodeMap.put("63", "青海");cityCodeMap.put("64", "宁夏");
+            cityCodeMap.put("65", "新疆");cityCodeMap.put("71", "台湾");cityCodeMap.put("81", "香港");
+            cityCodeMap.put("82", "澳门");cityCodeMap.put("91", "国外");
+    }
 
 
     // 身份证号码中的出生日期的格式
@@ -84,13 +83,13 @@ public class IdCardValidator {
     /**
      * 18位身份证中最后一位校验码
      */
-    private final static char[] VERIFY_CODE = { '1', '0', 'X', '9', '8', '7',
+    private static final  char[] VERIFY_CODE = { '1', '0', 'X', '9', '8', '7',
             '6', '5', '4', '3', '2' };
 
     /**
      * 18位身份证中，各个数字的生成校验码时的权值
      */
-    private final static int[] VERIFY_CODE_WEIGHT = { 7, 9, 10, 5, 8, 4, 2, 1,
+    private static final int[] VERIFY_CODE_WEIGHT = { 7, 9, 10, 5, 8, 4, 2, 1,
             6, 3, 7, 9, 10, 5, 8, 4, 2 };
 
 
@@ -102,7 +101,6 @@ public class IdCardValidator {
      */
     public static boolean validateIdCardStrictly(String idCard) {
         String cardNumber = idCard == null ? "" : idCard.trim().toUpperCase();
-
 
         //基本数字和位数验校
         if(!isIdCard(cardNumber)) {
@@ -122,15 +120,10 @@ public class IdCardValidator {
         //判断是否为合法的省份
         //判断是否为合法生日
         //身份证号的第18位校验正确
-        if(null == getProvinceNameByCode(cardNumber.substring(0, 2))
+        return !(null == getProvinceNameByCode(cardNumber.substring(0, 2))
                 || null == getBirthDate(cardNumber.substring(6, 14))
                 || calculateVerifyCode(cardNumber) != cardNumber
-                .charAt(NEW_CARD_NUMBER_LENGTH - 1)) {
-            return false;
-        }
-        else {
-            return true;
-        }
+                .charAt(NEW_CARD_NUMBER_LENGTH - 1));
 
     }
 
@@ -145,7 +138,6 @@ public class IdCardValidator {
 
                 String birthdayStr;
 
-                //15位转18位
                 if(OLD_CARD_NUMBER_LENGTH == idCardNumber.length()) {
                     birthdayStr = "19" + idCardNumber.substring(6, 12);
                 }
@@ -154,19 +146,19 @@ public class IdCardValidator {
 
                     if(calculateVerifyCode(idCardNumber) != idCardNumber
                             .charAt(NEW_CARD_NUMBER_LENGTH - 1)) {
-                        throw new InvalidIdCardException("身份证校验位错误");
+                        throw new ServiceException("身份证校验位错误");
                     }
                 }
 
                 String provinceName = getProvinceNameByCode(idCardNumber.substring(0,2));
                 if(null == provinceName) {
-                    throw new InvalidIdCardException("身份证省份/直辖市代码错误");
+                    throw new ServiceException("身份证省份/直辖市代码错误");
                 }
 
                 Date birthDate = DateUtils.parseDateStrictly(birthdayStr, BIRTH_DATE_FORMAT);
                 Date today = new Date();
                 if(birthDate.after(today) || birthDate.before(MINIMAL_BIRTH_DATE)) {
-                    throw new InvalidIdCardException("身份证日期错误");
+                    throw new ServiceException("身份证日期错误");
                 }
 
                 idCard = new IdCard();
@@ -184,20 +176,20 @@ public class IdCardValidator {
 
             }
             else {
-                throw new InvalidIdCardException("身份证格式错误");
+                throw new ServiceException("身份证格式错误");
             }
 
-        } catch (InvalidIdCardException e) {
+        } catch (ServiceException e) {
             throw e;
         } catch (Exception e) {
             log.error("身份证解析错误：{}", e.getMessage(), e);
-            throw new InvalidIdCardException("身份证解析错误");
+            throw new ServiceException("身份证解析错误");
         }
 
         return idCard;
     }
 
-    private static int getAge(Date birthday) throws InvalidIdCardException{
+    private static int getAge(Date birthday) throws ServiceException{
         int age;
         try {
             Calendar now = Calendar.getInstance();
@@ -216,7 +208,7 @@ public class IdCardValidator {
                 }*/
             }
         } catch (Exception e) {
-            throw new InvalidIdCardException("计算年龄错误");
+            throw new ServiceException("计算年龄错误");
         }
 
         return age;
@@ -270,42 +262,6 @@ public class IdCardValidator {
 
         return str == null || "".equals(str.trim()) ? false : str.matches("^[0-9]*$");
     }
-
-/*    public boolean validate() {
-        if (null == cacheValidateResult) {
-            boolean result = true;
-            // 身份证号不能为空
-            result = result && (null != cardNumber);
-            // 身份证号长度是18(新证)
-            result = result && NEW_CARD_NUMBER_LENGTH == cardNumber.length();
-            // 身份证号的前17位必须是阿拉伯数字
-            for (int i = 0; result && i < NEW_CARD_NUMBER_LENGTH - 1; i++) {
-                char ch = cardNumber.charAt(i);
-                result = result && ch >= '0' && ch <= '9';
-            }
-            // 身份证号的第18位校验正确
-            result = result
-                    && (calculateVerifyCode(cardNumber) == cardNumber
-                    .charAt(NEW_CARD_NUMBER_LENGTH - 1));
-            // 出生日期不能晚于当前时间，并且不能早于1900年
-            try {
-                Date birthDate = this.getBirthDate();
-                result = result && null != birthDate;
-                result = result && birthDate.before(new Date());
-                result = result && birthDate.after(MINIMAL_BIRTH_DATE);
-
-                String birthdayPart = this.getBirthDayPart();
-                String realBirthdayPart = this.createBirthDateParser().format(
-                        birthDate);
-                result = result && (birthdayPart.equals(realBirthdayPart));
-            } catch (Exception e) {
-                result = false;
-            }
-            // TODO 完整身份证号码的省市县区检验规则
-            cacheValidateResult = Boolean.valueOf(result);
-        }
-        return cacheValidateResult;
-    }*/
 
     private static String getAddressCode(String cardNumber) {
         return cardNumber.substring(0, 6);

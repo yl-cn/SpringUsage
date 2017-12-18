@@ -25,7 +25,6 @@ import org.springframework.web.servlet.ModelAndView;
  * controller and they would be handled here, if not handled in the controller
  * already.
  *
- * @author Paul Chapman
  */
 @Slf4j
 @ControllerAdvice

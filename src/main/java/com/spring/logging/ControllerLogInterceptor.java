@@ -2,19 +2,20 @@ package com.spring.logging;
 
 import com.spring.logging.annotation.ControllerLogging;
 import com.spring.util.GsonUtil;
+import com.spring.util.HttpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
+import org.springframework.util.CollectionUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import java.lang.reflect.Method;
+import java.lang.annotation.Annotation;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,64 +23,58 @@ import java.util.Map;
 @Aspect
 @Component
 @Slf4j
-public class ControllerLogInterceptor {
+public class ControllerLogInterceptor extends BaseInterceptor{
+
+
+
     /**
      * 定义日志切入点
      */
     //@Pointcut("@annotation(com.gznb.member.logging.annotation.ControllerLogging)")
-    @Pointcut("execution(public * com.spring.controller.*.*(..)) ")
+    @Pointcut("execution(public * com.spring.service.*.*(..)) ")
     public void controllerAspect() {
+        //
     }
 
     @Before("controllerAspect()")
     public void doBefore(JoinPoint joinPoint) {
 
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
-        HttpSession session = request.getSession();
+        //HttpSession session = request.getSession();
 
         //请求的IP
-        String ip = request.getRemoteAddr();
+        String ip = HttpUtil.getIpAddress(request);
         try {
-            String methodDescription = getControllerMethodDescription(joinPoint);
+            String methodDescription = getMethodDescription(joinPoint, ControllerLogging.class);
             log.info("-----------------------{}--------------------------------------", methodDescription );
             log.info("方法描述: {}", methodDescription );
             log.info("请求方法: {}", (joinPoint.getTarget().getClass().getName() + "." + joinPoint.getSignature().getName() + "()"));
-
-            log.info("请求IP: {} ", ip);
+            log.info("请求IP:   {}", ip);
 
             Object[] args = joinPoint.getArgs();
             Map<String, Object> params = new HashMap<>();
             for (Object arg : args) {
                 if (!(arg instanceof BindingResult) && !(arg instanceof ModelMap) && !(arg instanceof Model)) {
+
                     if (arg instanceof HttpServletRequest) {
-                        HttpServletRequest httpRequest = (HttpServletRequest) arg;
-                        Enumeration<?> enume = httpRequest.getParameterNames();
-                        if (null != enume) {
-                            Map<String, String> hpMap = new HashMap<>();
-                            while (enume.hasMoreElements()) {
-                                Object element = enume.nextElement();
-                                if (null != element) {
-                                    String paramName = (String) element;
-                                    String paramValue = httpRequest.getParameter(paramName);
-                                    hpMap.put(paramName, paramValue);
-                                }
-                            }
-                            params.put("HttpServletRequest", hpMap);
+                        Map<String, String> requestParamsMap = HttpUtil.getHttpRequestParams((HttpServletRequest)arg);
+
+                        if(!CollectionUtils.isEmpty(requestParamsMap)) {
+                            params.put("HttpServletRequest", requestParamsMap);
                         }
                     } else {
-                        try {
-                            params.put(arg.getClass().getSimpleName(), GsonUtil.toJson(arg, false));
-                        } catch (Throwable e) {
-                            log.warn("不能转换为Json字符串:" + arg.getClass().getName());
-                        }
+                        params.put(arg.getClass().getSimpleName(),arg);
                     }
                 }
             }
-            log.info(GsonUtil.toJson(params, true));
+            log.info("请求参数:\n {}", GsonUtil.toJson(params, true));
 
             log.info("-----------------------{}--------------------------------------", methodDescription);
         } catch (Exception e) {
-            log.error("异常信息:{}", e.getMessage());
+            log.error("\n打印控制器信息错误:: 异常类: {} \n 异常方法:{} \n 异常信息:{} \n}",
+                    joinPoint.getClass().getName(),
+                    joinPoint.getSignature().getName(),
+                    e.getMessage());
         }
     }
 
@@ -116,39 +111,14 @@ public class ControllerLogInterceptor {
                 e.getClass().getName(), e.getMessage());
     }
 
+    @Override
+    public <T extends Annotation> String getAnnotationValue(T annotation) {
 
-    /**
-     * 获取注解中对方法的描述信息
-     *
-     * @param joinPoint 切点
-     * @return 方法描述
-     * @throws Exception
-     */
-    private static String getControllerMethodDescription(JoinPoint joinPoint)
-            throws Exception {
-        String targetName = joinPoint.getTarget().getClass().getName();
-        String methodName = joinPoint.getSignature().getName();
-        Object[] arguments = joinPoint.getArgs();
-        Class targetClass = Class.forName(targetName);
-        Method[] methods = targetClass.getMethods();
-        String description = "";
-        for (Method method : methods) {
-            if (method.getName().equals(methodName)) {
-                Class[] clazzs = method.getParameterTypes();
-                if (clazzs.length == arguments.length) {
-                    ControllerLogging controllerLogging = method.getAnnotation(ControllerLogging.class);
-                    if(null == controllerLogging) {
-                        description = methodName;
-                    }
-                    else {
-                        description = controllerLogging.moduleName();
-                    }
-
-                    break;
-                }
-            }
+        if(null != annotation && annotation instanceof ControllerLogging) {
+            ControllerLogging controllerLogging = (ControllerLogging)annotation;
+            return controllerLogging.moduleName();
         }
-        return description;
+        return null;
     }
 
 }

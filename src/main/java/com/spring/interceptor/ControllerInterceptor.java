@@ -1,12 +1,14 @@
 package com.spring.interceptor;
 
 import com.spring.util.GsonUtil;
+import com.spring.util.HttpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.slf4j.Logger;
 import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
+import org.springframework.util.CollectionUtils;
 import org.springframework.validation.BindingResult;
 
 import javax.servlet.http.HttpServletRequest;
@@ -69,20 +71,11 @@ public class ControllerInterceptor implements MethodInterceptor {
         for (Object arg : args) {
             if (!(arg instanceof BindingResult) && !(arg instanceof ModelMap) && !(arg instanceof Model)) {
                 if (arg instanceof HttpServletRequest) {
-                    HttpServletRequest httpRequest = (HttpServletRequest) arg;
-                    Enumeration<?> enume = httpRequest.getParameterNames();
-                    if (null != enume) {
-                        Map<String, String> hpMap = new HashMap<>();
-                        while (enume.hasMoreElements()) {
-                            Object element = enume.nextElement();
-                            if (null != element) {
-                                String paramName = (String) element;
-                                String paramValue = httpRequest.getParameter(paramName);
-                                hpMap.put(paramName, paramValue);
-                            }
-                        }
+                    Map<String, String> hpMap = HttpUtil.getHttpRequestParams((HttpServletRequest) arg);
+                    if(!CollectionUtils.isEmpty(hpMap)) {
                         params.put("HttpServletRequest", hpMap);
                     }
+
                 } else {
                     try {
                         params.put("arg" + i, GsonUtil.toJson(arg, false));
